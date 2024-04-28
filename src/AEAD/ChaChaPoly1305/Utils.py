@@ -46,7 +46,7 @@ def construct_chacha_poly1305_auth_msg(ciphertext: bytes, associated_data: bytes
 
 def construct_chacha_poly1305_coeffs(ciphertext: bytes, associated_data: bytes=b"") -> List[int]:
     """ Create poly1305's coefficients from ciphertext:
-        Poly1305(r,s,c) = ((c1*r^n + c2*r^(n-1) + ... + c^n*r    \pmod{2^130 - 5}) + s)     \pmod{2^128}
+        Poly1305(r,s,c) = ((c1*r^n + c2*r^(n-1) + ... + c^n*r    mod{2^130 - 5}) + s)     mod{2^128}
                             ---------------------------------
                                             |
                                             v

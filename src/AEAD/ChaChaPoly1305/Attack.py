@@ -40,7 +40,38 @@ def nonce_reuse(ct1: bytes, ad1: bytes, tag1: bytes,
     return roots
 
 DATA_FORMAT = Tuple[bytes,bytes,bytes,bytes]
-def forgery_attack(known_data: List[DATA_FORMAT], target_plaintext: bytes, 
+def forgery_tag(known_data: List[DATA_FORMAT], target_ciphertext: bytes, 
+                   target_associated_data: bytes=b"") -> bytes:
+    """ Recover the Chacha-Poly1305 key when nonce is reused
+        then forgery arbitrary message with Associated Data
+
+    :param known_data: List of tuple (plaintext (if known else None), ciphertext, associated data, tag).
+    :param target_ciphertext: Target ciphertext that we want to forgery.
+    :param target_associated_data: Associated Data corressponding to target plaintext.
+    :return: The authentication tag that can be decrypted with ChaCha_Poly1305(same nonce)
+    """
+
+    # We need at least two!!
+    assert len(known_data) > 1, "We need at least two!!"
+
+    # Step 1: Recover poly1305's key
+    data1 = known_data[0]
+    data2 = known_data[1]
+    # anyway just use the first key :<
+    r,s = nonce_reuse(ct1=data1[1], ad1=data1[2], tag1=data1[3],
+                        ct2=data2[1], ad2=data2[2], tag2=data2[3])[0]
+    rs  = int(r).to_bytes(length=16, byteorder='little') +\
+          int(s).to_bytes(length=16, byteorder='little')
+
+    # Step 2: Forgery Attack!
+    target_tag = poly1305(
+        msg=construct_chacha_poly1305_auth_msg(target_ciphertext, target_associated_data),
+        key=rs
+    )
+    
+    return target_tag
+
+def forgery_message(known_data: List[DATA_FORMAT], target_plaintext: bytes, 
                    target_associated_data: bytes=b"") -> Tuple[bytes, bytes]:
     """ Recover the Chacha-Poly1305 key when nonce is reused
         then forgery arbitrary message with Associated Data
@@ -49,7 +80,7 @@ def forgery_attack(known_data: List[DATA_FORMAT], target_plaintext: bytes,
     :param target_plaintext: Target plaintext that we want to forgery.
     :param target_associated_data: Associated Data corressponding to target plaintext.
     :return: Tuple contain ciphertext and tag that can be decrypted with ChaCha_Poly1305(same nonce) 
-            and resultedexpected target_plaintext
+            and result edexpected target_plaintext
     """
 
     # We need at least two!!
