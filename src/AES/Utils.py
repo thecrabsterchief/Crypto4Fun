@@ -1,5 +1,7 @@
 # Reference: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
 
+# =================================== SBOX ===================================
+
 Sbox = (
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
     0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -49,12 +51,38 @@ Inv_Sbox = (
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63,
     0x55, 0x21, 0x0c, 0x7d
 )
+# ============================== Mult Table ==============================
+
+def gf_mul123(inp, factor):
+    if factor == 1:
+        return inp
+    elif factor == 2:
+        c = inp << 1
+        if ((inp >> 7) & 1) == 1:
+            c ^= 0x11b
+        return c
+    elif factor == 3:
+        return (gf_mul123(inp, 2) ^ inp)
+
+Mul1 = [gf_mul123(i, 1) for i in range(256)]
+Mul2 = [gf_mul123(i, 2) for i in range(256)]
+Mul3 = [gf_mul123(i, 3) for i in range(256)]
+
+# ============================== Div Table ==============================
+
+Div1 = [Mul1.index(i) for i in range(256)]
+Div2 = [Mul2.index(i) for i in range(256)]
+Div3 = [Mul3.index(i) for i in range(256)]
+
+# =================================== RCON ===================================
 
 Rcon = (
     0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36, 0x6C,
     0xD8, 0xAB, 0x4D, 0x9A, 0x2F, 0x5E, 0xBC, 0x63, 0xC6, 0x97, 0x35, 0x6A,
     0xD4, 0xB3, 0x7D, 0xFA, 0xEF, 0xC5, 0x91, 0x39
 )
+
+# ========================== Key Expansion Utils ==========================
 
 def RotWord(word: bytes) -> bytes:
     """Rotate word by 1 byte to the left."""
@@ -65,6 +93,8 @@ def SubWord(word: bytes) -> bytes:
     """Substitute each byte in word with Sbox."""
     assert len(word) == 4
     return bytes([Sbox[b] for b in word])
+
+# ========================== Reverse Key Expansion ==========================
 
 def reverse_rounds_key(round_key: bytes, n_rounds: int):
     """Reverse the key schedule to get the original key."""
